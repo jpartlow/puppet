@@ -1,6 +1,3 @@
-require 'puppet/acceptance/config_utils'
-extend Puppet::Acceptance::ConfigUtils
-
 test_name "node_name_fact should be used to determine the node name for puppet agent"
 
 success_message = "node_name_fact setting was correctly used to determine the node name"
@@ -46,13 +43,11 @@ manifest << node_names.map do |node_name|
   ]
 end.join("\n")
 
-puppetconf_file = "#{testdir}/puppet.conf"
 with_these_opts = {
   'master' => {
     'rest_authconfig' => "#{testdir}/auth.conf",
-    'node_terminus'   => nil,
-    'manifest'        => manifest_file
-  }
+    'manifest'        => manifest_file,
+  },
 }
 
 create_remote_file master, authfile, authconf
@@ -63,7 +58,7 @@ on master, "chmod 777 #{testdir}"
 
 with_puppet_running_on master, with_these_opts, testdir do
 
-  run_agent_on(agents, "--no-daemonize --verbose --onetime --node_name_fact kernel --server #{master}") do
+  on(agents, puppet('agent', "--no-daemonize --verbose --onetime --node_name_fact kernel --server #{master}")) do
     assert_match(/defined 'message'.*#{success_message}/, stdout)
   end
 

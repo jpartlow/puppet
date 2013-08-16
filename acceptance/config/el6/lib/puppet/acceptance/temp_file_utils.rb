@@ -18,7 +18,8 @@ module Puppet
         # set default options
         options[:mkdirs] ||= false
         options[:owner] ||= host['user']
-        options[:group] ||= host['group'] || "pe-puppet"
+        default_group = (host.is_pe? ? 'pe-puppet' : 'puppet')
+        options[:group] ||= host['group'] || default_group
         options[:mode] ||= "755"
 
         file_path = get_test_file_path(host, file_rel_path)
