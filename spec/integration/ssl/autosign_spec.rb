@@ -31,25 +31,38 @@ describe "autosigning" do
     Puppet::SSL::Key.indirection.termini.clear
   end
 
+  def write_csr_attributes(yaml)
+    File.open(Puppet.settings[:csr_attributes], 'w') do |file|
+      file.puts YAML.dump(yaml)
+    end
+  end
+
+  context "with an invalid csr_attributes file" do
+    it "empty file"
+    it "a string"
+    it "an empty hash"
+    it "an empty array"
+    it "ignores the file without raising errors" do
+      write_csr_attributes('')
+      host.generate_certificate_request
+      csr = Puppet::SSL::CertificateRequest.indirection.find(host.name)
+      expect(csr.subject_alt_names).to include('DNS:althostname.nowhere')
+    end
+  end
+
   context "with extension requests from csr_attributes file" do
     let(:ca) { Puppet::SSL::CertificateAuthority.new }
-
-    def write_csr_attributes
-      File.open(Puppet.settings[:csr_attributes], 'w') do |file|
-        file.puts YAML.dump(csr_attributes_content)
-      end
-    end
 
     context "and subjectAltName" do
       it "raises an error if you include subjectAltName in csr_attributes" do
         csr_attributes_content['extension_requests']['subjectAltName'] = 'foo'
-        write_csr_attributes
+        write_csr_attributes(csr_attributes_content)
         expect { host.generate_certificate_request }.to raise_error(Puppet::Error, /subjectAltName.*conflicts with internally used extension request/)
       end
 
       it "properly merges subjectAltName when in settings" do
         Puppet.settings[:dns_alt_names] = 'althostname.nowhere'
-        write_csr_attributes
+        write_csr_attributes(csr_attributes_content)
         host.generate_certificate_request
         csr = Puppet::SSL::CertificateRequest.indirection.find(host.name)
         expect(csr.subject_alt_names).to include('DNS:althostname.nowhere')
@@ -59,7 +72,7 @@ describe "autosigning" do
     context "without subjectAltName" do
 
       before do
-        write_csr_attributes
+        write_csr_attributes(csr_attributes_content)
         host.generate_certificate_request
       end
 
