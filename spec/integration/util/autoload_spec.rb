@@ -30,7 +30,7 @@ describe Puppet::Util::Autoload do
     File.open(path, "w") { |f|
       f.puts "\nAutoloadIntegrator.newthing(:#{name.to_s})\n"
       }
-    yield
+    yield path
     File.delete(path)
   end
 
@@ -83,6 +83,21 @@ describe Puppet::Util::Autoload do
         loader.class.should be_loaded("bar/withext.rb")
       }
     }
+  end
+
+  it "should not consider a file changed, for the purposes of autoloading, if mtime differs only in nsecs." do
+    with_loader("foo", "bar") do |dir,loader|
+      with_file(:test, dir, 'test.rb') do |file_path|
+        expect(loader.load(:test)).to be_true
+        expect(loader.changed?(:test)).to be_false
+        file = Puppet::FileSystem::File.new(file_path)
+        original_mtime = file.stat.mtime
+        whole_mtime = Time.at(original_mtime.to_i)
+        FileUtils.touch file.path, :mtime => whole_mtime
+        expect(original_mtime.nsec).to_not eq(file.stat.mtime.nsec)
+        expect(loader.changed?(:test)).to be_false
+      end
+    end
   end
 
   it "should be able to load files directly from modules" do
