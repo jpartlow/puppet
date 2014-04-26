@@ -129,11 +129,14 @@ describe Puppet::Configurer::Downloader do
       @dl_name = tmpfile("downloadpath")
       source_name = tmpfile("source")
       File.open(source_name, 'w') {|f| f.write('hola mundo') }
-      @dler = Puppet::Configurer::Downloader.new("foo", @dl_name, source_name)
+      env = Puppet::Node::Environment.remote('foo')
+      @dler = Puppet::Configurer::Downloader.new("foo", @dl_name, source_name)#, Puppet[:pluginsignore], env)
     end
 
     it "should not skip downloaded resources when filtering on tags" do
       Puppet[:tags] = 'maytag'
+      require 'ruby-debug/pry'; Debugger.start
+      debugger
       @dler.evaluate
 
       Puppet::FileSystem.exist?(@dl_name).should be_true

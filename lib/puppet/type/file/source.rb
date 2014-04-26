@@ -174,7 +174,6 @@ module Puppet
             :links                => resource[:links],
             :source_permissions   => resource[:source_permissions]
           }
-
           if data = Puppet::FileServing::Metadata.indirection.find(source, options)
             @metadata = data
             @metadata.source = source
