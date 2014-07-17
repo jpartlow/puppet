@@ -342,6 +342,120 @@ describe "Puppet::Parser::Compiler" do
       end
     end
 
+    describe "resource expression evaluation (PUP-511)" do
+      context "with literal titles" do
+        {
+          "thing"     => "String",
+          "1"         => "Integer",
+          "3.0"       => "Float",
+          "true"      => "Boolean",
+          "false"     => "Boolean",
+          "[thing]"   => "Array[String]",
+          "[1]"       => "Array[Integer]",
+          "[3.0]"     => "Array[Float]",
+          "[true]"    => "Array[Boolean]",
+          "[false]"   => "Array[Boolean]",
+        }.each do |element,type|
+          it "accepts a title array with the #{type} #{element} in it" do
+            catalog = compile_to_catalog(<<-MANIFEST)
+              notify { #{element}: }
+            MANIFEST
+
+            title = element.gsub(/\[|\]/,'')
+            expect(catalog).to have_resource("Notify[#{title}]")
+          end
+        end
+
+        {
+          "undef"              => /Evaluation Error.*No title provided/,
+          "{nested => hash}"   => /Can not use a Hash where a String is expected/,
+          "/regexp/"           => /can't convert Regexp to String/,
+          "default"            => /Can not use a Symbol\(:default\) where a String is expected/,
+          "[undef]"            => /Evaluation Error.*No title provided/,
+          "[[nested, array]]"  => /Nested arrays are unexpectedly allowed/,
+          "[{nested => hash}]" => /Can not use a Hash where a String is expected/,
+          "[/regexp/]"         => /can't convert Regexp to String/,
+          "[default]"          => /Can not use a Symbol\(:default\) where a String is expected/,
+        }.each do |type,expectation|
+
+          it "raises an error for an array containing a #{type}" do
+            expect do
+              catalog = compile_to_catalog(<<-MANIFEST)
+                notify { #{type}: }
+              MANIFEST
+            end.to raise_error(Puppet::Error, expectation)
+          end
+
+        end
+      end
+
+      context "with titles from a variable" do
+        {
+          "thing"     => "String",
+          "1"         => "Integer",
+          "3.0"       => "Float",
+          "true"      => "Boolean",
+          "false"     => "Boolean",
+          "[thing]"   => "Array[String]",
+          "[1]"       => "Array[Integer]",
+          "[3.0]"     => "Array[Float]",
+          "[true]"    => "Array[Boolean]",
+          "[false]"   => "Array[Boolean]",
+        }.each do |element,type|
+          it "accepts a title array with the #{type} #{element} in it" do
+            catalog = compile_to_catalog(<<-MANIFEST)
+              $x = #{element}
+              notify { $x: }
+            MANIFEST
+
+            title = element.gsub(/\[|\]/,'')
+            expect(catalog).to have_resource("Notify[#{title}]")
+          end
+        end
+
+        {
+          "undef"              => /Evaluation Error.*No title provided/,
+          "{nested => hash}"   => /Can not use a Hash where a String is expected/,
+          "/regexp/"           => /can't convert Regexp to String/,
+          "default"            => /Can not use a Symbol\(:default\) where a String is expected/,
+          "[undef]"            => /Evaluation Error.*No title provided/,
+          "[[nested, array]]"  => /Nested arrays are unexpectedly allowed/,
+          "[{nested => hash}]" => /Can not use a Hash where a String is expected/,
+          "[/regexp/]"         => /can't convert Regexp to String/,
+          "[default]"          => /Can not use a Symbol\(:default\) where a String is expected/,
+        }.each do |type,expectation|
+
+          it "raises an error for an array containing a #{type}" do
+            expect do
+              catalog = compile_to_catalog(<<-MANIFEST)
+                $x = #{type}
+                notify { $x: }
+              MANIFEST
+            end.to raise_error(Puppet::Error, expectation)
+          end
+
+        end
+
+        it "raises an error for duplicate entries in title array" do
+          expect do
+            catalog = compile_to_catalog(<<-MANIFEST)
+              $x = [same, same]
+              notify { $x: }
+            MANIFEST
+          end.to raise_error(Puppet::Error, /Resource Statement.*Duplicate declaration/)
+        end
+
+        it "noops for an empty title array" do
+          catalog = compile_to_catalog(<<-MANIFEST)
+            $x = []
+            notify { $x: }
+          MANIFEST
+
+          expect(catalog.resources.map(&:type).grep(/Notify/)).to be_empty
+        end
+      end
+    end
+
     context "when dealing with variable references" do
       it 'an initial underscore in a variable name is ok' do
         catalog = compile_to_catalog(<<-MANIFEST)

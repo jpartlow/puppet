@@ -313,6 +313,86 @@ describe "Puppet::Parser::Compiler" do
     end
   end
 
+  describe "resource expression evaluation (PUP-511)" do
+    context "with titles from a variable" do
+      it "raises a deprecation warning if title is undef" do
+        Puppet.expects(:deprecation_warning).with("Creating a resource with an undef title is deprecated")
+        catalog = compile_to_catalog(<<-MANIFEST)
+          $x = undef
+          notify { $x: }
+        MANIFEST
+      end
+
+      {
+        "thing"   => "String",
+        "1"       => "Integer",
+        "3.0"     => "Float",
+        "true"    => "Boolean",
+        "false"   => "Boolean",
+      }.each do |element,type|
+        it "accepts a title array with the #{type} #{element} in it" do
+          catalog = compile_to_catalog(<<-MANIFEST)
+            $x = [#{element}]
+            notify { $x: }
+          MANIFEST
+
+          expect(catalog).to have_resource("Notify[#{element.gsub(/'/,'')}]")
+        end
+      end
+
+      {
+        "undef"            => /succeeds -- deprecate\?/,
+        "[nested, array]"  => /this passes in future also/,
+        "{nested => hash}" => /succeeds -- deprecate\?/,
+      }.each do |type,expectation|
+
+        it "raises an error for an array containing a #{type}" do
+          expect do
+            catalog = compile_to_catalog(<<-MANIFEST)
+              $x = [#{type}]
+              notify { $x: }
+            MANIFEST
+          end.to raise_error(Puppet::Error, expectation)
+        end
+
+      end
+
+      {
+        "/regexp/"         =>  /Syntax error at ':'; expected '}'/,
+        "default"          =>  /Syntax error at ':'; expected '}'/,
+      }.each do |type,expectation|
+
+        it "raises an error for an array containing a #{type}" do
+          expect do
+            catalog = compile_to_catalog(<<-MANIFEST)
+              $x = #{type}
+              notify { [$x]: }
+            MANIFEST
+          end.to raise_error(Puppet::Error, expectation)
+        end
+
+      end
+
+      it "raises an error for duplicate entries in title array" do
+        expect do
+          catalog = compile_to_catalog(<<-MANIFEST)
+            $x = [same, same]
+            notify { $x: }
+          MANIFEST
+        end.to raise_error(Puppet::Error, /Duplicate declaration/)
+      end
+
+      it "noops for an empty title array" do
+        catalog = compile_to_catalog(<<-MANIFEST)
+          $x = []
+          notify { $x: }
+        MANIFEST
+
+        expect(catalog.resources.map(&:type).grep(/Notify/)).to be_empty
+      end
+    end
+  end
+
   context 'when working with immutable node data' do
     context 'and have opted in to immutable_node_data' do
       before :each do
