@@ -117,13 +117,6 @@ jobs:
                 "mem_mb": 8192,
                 "disk_gb": 10,
                 "cpu_mode": "host-model"
-              },
-              {
-                "role": "agent",
-                "count": 1,
-                "cpus": 2,
-                "mem_mb": 4096,
-                "cpu_mode": "host-model"
               }
             ]
       - name: Install Ruby and Run Bundler
@@ -153,7 +146,7 @@ jobs:
         run: |-
           cat > install_openvox_params.json <<EOF
           {
-            "openvox_agent_targets": "agent",
+            "openvox_agent_targets": "primary",
             "openvox_server_targets": "primary",
             "openvox_agent_params": {
               "openvox_collection": "${OPENVOX_COLLECTION}",
