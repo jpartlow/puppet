@@ -8,9 +8,9 @@ module Acceptance
     I18NDEMO_NAME = "i18ndemo"
     I18NDEMO_MODULE_NAME = "eputnam-#{I18NDEMO_NAME}"
 
-    def configure_master_system_locale(language)
-      language = enable_locale_language(master, language)
-      fail_test("puppet server machine is missing #{language} locale. help...") if language.nil?
+    def configure_master_system_locale(requested_language)
+      language = enable_locale_language(master, requested_language)
+      fail_test("puppet server machine is missing #{requested_language} locale. help...") if language.nil?
 
       on(master, "localectl set-locale LANG=#{language}")
       on(master, puppet_resource('service', master['puppetservice'], 'ensure=stopped'))
@@ -18,7 +18,7 @@ module Acceptance
     end
 
     def reset_master_system_locale
-      language = language_name(master, 'en_US') || 'en_US'
+      language = enable_locale_language(master, 'en_US')
       on(master, "localectl set-locale LANG=#{language}")
       on(master, puppet_resource('service', master['puppetservice'], 'ensure=stopped'))
       on(master, puppet_resource('service', master['puppetservice'], 'ensure=running'))
