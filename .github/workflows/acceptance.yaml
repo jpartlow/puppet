@@ -50,9 +50,10 @@ on:
           (Collection) OpenVox collection to use. (ignored if
           Pre-release Build is true)
 
-          NOTE: This should really only be set to openvox7 when testing
-          with the branch 7.x test suite.
-        default: 'openvox7'
+          NOTE: This should really only be set to openvox8 when
+          testing the main branch. If you need to test openvox7, you
+          should run the pipeline from the 7.x branch instead.
+        default: 'openvox8'
         type: string
       artifacts-url:
         description: |-
@@ -82,7 +83,8 @@ jobs:
           - [debian, '10']
           - [debian, '11']
           - [debian, '12']
-          # No Debian 13 in 7.x
+          # No builds of openvox-server in artifacts.voxpupuli.org yet
+          # - [debian, '13', 'amd64', 'daily-latest']
           - [rocky, '8']
           - [rocky, '9']
           - [ubuntu, '18.04']
